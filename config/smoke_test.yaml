@@ -1,0 +1,114 @@
+experiments:
+  - run_id: FedMPQ-baseline_smoke
+    description: |
+      Smoke-test of FedMPQ baseline with synthetic data.
+    dataset:
+      name: synthetic
+      num_clients: 2
+      alpha: 0.5
+      batch_size: 32
+      participation_rate: 1.0
+    model:
+      name: fedmpq
+      architecture: tiny_cnn
+      bits: 8
+      lambda_b: 0.01
+    training:
+      num_rounds: 2
+      local_epochs: 1
+      lr: 0.01
+      optimizer: sgd
+      seed: 1
+
+  - run_id: FedMPQ-KD_default_smoke
+    description: |
+      Smoke-test of FedMPQ-KD (α=0.5, T=2) with synthetic data.
+    dataset:
+      name: synthetic
+      num_clients: 2
+      alpha: 0.5
+      batch_size: 32
+      participation_rate: 1.0
+    model:
+      name: fedmpq_kd
+      architecture: tiny_cnn
+      bits: 8
+      lambda_b: 0.01
+    training:
+      num_rounds: 2
+      local_epochs: 1
+      lr: 0.01
+      optimizer: sgd
+      seed: 2
+    kd_params:
+      alpha: 0.5
+      T: 2.0
+
+  - run_id: FedMPQ-KD_high_smoke
+    description: |
+      Smoke-test of FedMPQ-KD high distillation weight (α=1.0).
+    dataset:
+      name: synthetic
+      num_clients: 2
+      alpha: 0.5
+      batch_size: 32
+      participation_rate: 1.0
+    model:
+      name: fedmpq_kd_high
+      architecture: tiny_cnn
+      bits: 8
+      lambda_b: 0.01
+    training:
+      num_rounds: 2
+      local_epochs: 1
+      lr: 0.01
+      optimizer: sgd
+      seed: 3
+    kd_params:
+      alpha: 1.0
+      T: 2.0
+
+  - run_id: FedKD_smoke
+    description: |
+      Smoke-test of FedKD global teacher variant.
+    dataset:
+      name: synthetic
+      num_clients: 2
+      alpha: 0.5
+      batch_size: 32
+      participation_rate: 1.0
+    model:
+      name: fedkd
+      architecture: tiny_cnn
+      bits: 8
+      lambda_b: 0.01
+    training:
+      num_rounds: 2
+      local_epochs: 1
+      lr: 0.01
+      optimizer: sgd
+      seed: 4
+    kd_params:
+      alpha: 0.5
+      T: 2.0
+
+  - run_id: Q-FedAvg_smoke
+    description: |
+      Smoke-test of Q-FedAvg (full precision, no quantisation).
+    dataset:
+      name: synthetic
+      num_clients: 2
+      alpha: 0.5
+      batch_size: 32
+      participation_rate: 1.0
+    model:
+      name: q_fedavg
+      architecture: tiny_cnn
+      bits: 32
+      lambda_b: 0.0
+    training:
+      num_rounds: 2
+      local_epochs: 1
+      lr: 0.01
+      optimizer: sgd
+      seed: 5

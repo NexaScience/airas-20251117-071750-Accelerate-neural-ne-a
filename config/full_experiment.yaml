@@ -1,0 +1,129 @@
+experiments:
+  - run_id: FedMPQ-baseline
+    description: |
+      Original FedMPQ baseline. Mixed-precision quantised MobileNet-V2 (avg 4-bit).
+      100 clients, extreme non-IID (Dirichlet α=0.1). No KD.
+    dataset:
+      name: cifar100
+      num_clients: 100
+      alpha: 0.1
+      batch_size: 64
+      participation_rate: 0.2         # 20% participation
+      dropout_prob: 0.2               # 20% stragglers
+    model:
+      name: fedmpq
+      architecture: mobilenetv2
+      bits: 4
+      lambda_b: 0.01
+    training:
+      num_rounds: 100
+      local_epochs: 2
+      lr: 0.05
+      optimizer: sgd
+      momentum: 0.9
+      seed: 42
+
+  - run_id: FedMPQ-KD_default
+    description: |
+      Proposed FedMPQ-KD with α=0.5, T=2. Same setup as baseline.
+    dataset:
+      name: cifar100
+      num_clients: 100
+      alpha: 0.1
+      batch_size: 64
+      participation_rate: 0.2
+      dropout_prob: 0.2
+    model:
+      name: fedmpq_kd
+      architecture: mobilenetv2
+      bits: 4
+      lambda_b: 0.01
+    training:
+      num_rounds: 100
+      local_epochs: 2
+      lr: 0.05
+      optimizer: sgd
+      momentum: 0.9
+      seed: 43
+    kd_params:
+      alpha: 0.5
+      T: 2.0
+
+  - run_id: FedMPQ-KD_high
+    description: |
+      FedMPQ-KD with higher distillation weight α=1.0.
+    dataset:
+      name: cifar100
+      num_clients: 100
+      alpha: 0.1
+      batch_size: 64
+      participation_rate: 0.2
+      dropout_prob: 0.2
+    model:
+      name: fedmpq_kd_high
+      architecture: mobilenetv2
+      bits: 4
+      lambda_b: 0.01
+    training:
+      num_rounds: 100
+      local_epochs: 2
+      lr: 0.05
+      optimizer: sgd
+      momentum: 0.9
+      seed: 44
+    kd_params:
+      alpha: 1.0
+      T: 2.0
+
+  - run_id: FedKD-global-teacher
+    description: |
+      Classical FedKD variant using global full-precision teacher.
+    dataset:
+      name: cifar100
+      num_clients: 100
+      alpha: 0.1
+      batch_size: 64
+      participation_rate: 0.2
+      dropout_prob: 0.2
+    model:
+      name: fedkd
+      architecture: mobilenetv2
+      bits: 4
+      lambda_b: 0.01
+    training:
+      num_rounds: 100
+      local_epochs: 2
+      lr: 0.05
+      optimizer: sgd
+      momentum: 0.9
+      seed: 45
+    kd_params:
+      alpha: 0.5
+      T: 2.0
+
+  - run_id: Q-FedAvg
+    description: |
+      Q-FedAvg full-precision baseline (no quantisation, λ_b=0).
+    dataset:
+      name: cifar100
+      num_clients: 100
+      alpha: 0.1
+      batch_size: 64
+      participation_rate: 0.2
+      dropout_prob: 0.2
+    model:
+      name: q_fedavg
+      architecture: mobilenetv2
+      bits: 32
+      lambda_b: 0.0
+    training:
+      num_rounds: 100
+      local_epochs: 2
+      lr: 0.05
+      optimizer: sgd
+      momentum: 0.9
+      seed: 46
+    # no kd_params required for FedAvg baseline
+  # ---------------------------------------------------------------------------
+  # End of experiment list
+  # ---------------------------------------------------------------------------
