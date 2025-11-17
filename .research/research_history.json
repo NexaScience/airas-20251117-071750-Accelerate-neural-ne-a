@@ -85,7 +85,140 @@
       "expected_datasets": [
         "CIFAR-10",
         "CIFAR-100"
-      ]
+      ],
+      "external_resources": {
+        "hugging_face": {
+          "models": [
+            {
+              "id": "timm/mobilenetv2_100.ra_in1k",
+              "author": "timm",
+              "sha": "5afa12513b048c79b9147a5d210e9bdc50035481",
+              "created_at": "2022-12-13T00:00:26+00:00",
+              "last_modified": "2025-01-21T18:17:54+00:00",
+              "private": false,
+              "gated": false,
+              "disabled": false,
+              "downloads": 53290,
+              "likes": 4,
+              "siblings": [
+                {
+                  "rfilename": ".gitattributes"
+                },
+                {
+                  "rfilename": "README.md"
+                },
+                {
+                  "rfilename": "config.json"
+                },
+                {
+                  "rfilename": "model.safetensors"
+                },
+                {
+                  "rfilename": "pytorch_model.bin"
+                }
+              ],
+              "card_data": {
+                "license": "apache-2.0",
+                "language": [],
+                "library_name": "timm",
+                "tags": [
+                  "image-classification",
+                  "timm",
+                  "transformers"
+                ],
+                "datasets": [
+                  "imagenet-1k"
+                ],
+                "task_categories": [],
+                "size_categories": [],
+                "metrics": [],
+                "widget": []
+              },
+              "tags": [
+                "timm",
+                "pytorch",
+                "safetensors",
+                "image-classification",
+                "transformers",
+                "dataset:imagenet-1k",
+                "arxiv:2110.00476",
+                "arxiv:1801.04381",
+                "license:apache-2.0",
+                "region:us"
+              ],
+              "pipeline_tag": "image-classification",
+              "library_name": "timm",
+              "readme": "---\ntags:\n- image-classification\n- timm\n- transformers\nlibrary_name: timm\nlicense: apache-2.0\ndatasets:\n- imagenet-1k\n---\n# Model card for mobilenetv2_100.ra_in1k\n\nA MobileNet-v2 image classification model. Trained on ImageNet-1k in `timm` using recipe template described below.\n\nRecipe details:\n * RandAugment `RA` recipe. Inspired by and evolved from EfficientNet RandAugment recipes. Published as `B` recipe in [ResNet Strikes Back](https://arxiv.org/abs/2110.00476).\n * RMSProp (TF 1.0 behaviour) optimizer, EMA weight averaging\n * Step (exponential decay w/ staircase) LR schedule with warmup\n\n\n## Model Details\n- **Model Type:** Image classification / feature backbone\n- **Model Stats:**\n  - Params (M): 3.5\n  - GMACs: 0.3\n  - Activations (M): 6.7\n  - Image size: 224 x 224\n- **Papers:**\n  - MobileNetV2: Inverted Residuals and Linear Bottlenecks: https://arxiv.org/abs/1801.04381\n  - ResNet strikes back: An improved training procedure in timm: https://arxiv.org/abs/2110.00476\n- **Dataset:** ImageNet-1k\n- **Original:** https://github.com/huggingface/pytorch-image-models\n\n## Model Usage\n### Image Classification\n```python\nfrom urllib.request import urlopen\nfrom PIL import Image\nimport timm\n\nimg = Image.open(urlopen(\n    'https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/beignets-task-guide.png'\n))\n\nmodel = timm.create_model('mobilenetv2_100.ra_in1k', pretrained=True)\nmodel = model.eval()\n\n# get model specific transforms (normalization, resize)\ndata_config = timm.data.resolve_model_data_config(model)\ntransforms = timm.data.create_transform(**data_config, is_training=False)\n\noutput = model(transforms(img).unsqueeze(0))  # unsqueeze single image into batch of 1\n\ntop5_probabilities, top5_class_indices = torch.topk(output.softmax(dim=1) * 100, k=5)\n```\n\n### Feature Map Extraction\n```python\nfrom urllib.request import urlopen\nfrom PIL import Image\nimport timm\n\nimg = Image.open(urlopen(\n    'https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/beignets-task-guide.png'\n))\n\nmodel = timm.create_model(\n    'mobilenetv2_100.ra_in1k',\n    pretrained=True,\n    features_only=True,\n)\nmodel = model.eval()\n\n# get model specific transforms (normalization, resize)\ndata_config = timm.data.resolve_model_data_config(model)\ntransforms = timm.data.create_transform(**data_config, is_training=False)\n\noutput = model(transforms(img).unsqueeze(0))  # unsqueeze single image into batch of 1\n\nfor o in output:\n    # print shape of each feature map in output\n    # e.g.:\n    #  torch.Size([1, 16, 112, 112])\n    #  torch.Size([1, 24, 56, 56])\n    #  torch.Size([1, 32, 28, 28])\n    #  torch.Size([1, 96, 14, 14])\n    #  torch.Size([1, 320, 7, 7])\n\n    print(o.shape)\n```\n\n### Image Embeddings\n```python\nfrom urllib.request import urlopen\nfrom PIL import Image\nimport timm\n\nimg = Image.open(urlopen(\n    'https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/beignets-task-guide.png'\n))\n\nmodel = timm.create_model(\n    'mobilenetv2_100.ra_in1k',\n    pretrained=True,\n    num_classes=0,  # remove classifier nn.Linear\n)\nmodel = model.eval()\n\n# get model specific transforms (normalization, resize)\ndata_config = timm.data.resolve_model_data_config(model)\ntransforms = timm.data.create_transform(**data_config, is_training=False)\n\noutput = model(transforms(img).unsqueeze(0))  # output is (batch_size, num_features) shaped tensor\n\n# or equivalently (without needing to set num_classes=0)\n\noutput = model.forward_features(transforms(img).unsqueeze(0))\n# output is unpooled, a (1, 1280, 7, 7) shaped tensor\n\noutput = model.forward_head(output, pre_logits=True)\n# output is a (1, num_features) shaped tensor\n```\n\n## Model Comparison\nExplore the dataset and runtime metrics of this model in timm [model results](https://github.com/huggingface/pytorch-image-models/tree/main/results).\n\n## Citation\n```bibtex\n@inproceedings{sandler2018mobilenetv2,\n  title={Mobilenetv2: Inverted residuals and linear bottlenecks},\n  author={Sandler, Mark and Howard, Andrew and Zhu, Menglong and Zhmoginov, Andrey and Chen, Liang-Chieh},\n  booktitle={Proceedings of the IEEE conference on computer vision and pattern recognition},\n  pages={4510--4520},\n  year={2018}\n}\n```\n```bibtex\n@misc{rw2019timm,\n  author = {Ross Wightman},\n  title = {PyTorch Image Models},\n  year = {2019},\n  publisher = {GitHub},\n  journal = {GitHub repository},\n  doi = {10.5281/zenodo.4414861},\n  howpublished = {\\url{https://github.com/huggingface/pytorch-image-models}}\n}\n```\n```bibtex\n@inproceedings{wightman2021resnet,\n  title={ResNet strikes back: An improved training procedure in timm},\n  author={Wightman, Ross and Touvron, Hugo and Jegou, Herve},\n  booktitle={NeurIPS 2021 Workshop on ImageNet: Past, Present, and Future}\n}\n```\n",
+              "extracted_code": "from urllib.request import urlopen\nfrom PIL import Image\nimport timm\n\nimg = Image.open(urlopen(\n    'https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/beignets-task-guide.png'\n))\n\nmodel = timm.create_model('mobilenetv2_100.ra_in1k', pretrained=True)\nmodel = model.eval()\n\n# get model specific transforms (normalization, resize)\ndata_config = timm.data.resolve_model_data_config(model)\ntransforms = timm.data.create_transform(**data_config, is_training=False)\n\noutput = model(transforms(img).unsqueeze(0))  # unsqueeze single image into batch of 1\n\ntop5_probabilities, top5_class_indices = torch.topk(output.softmax(dim=1) * 100, k=5)\n\nfrom urllib.request import urlopen\nfrom PIL import Image\nimport timm\n\nimg = Image.open(urlopen(\n    'https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/beignets-task-guide.png'\n))\n\nmodel = timm.create_model(\n    'mobilenetv2_100.ra_in1k',\n    pretrained=True,\n    features_only=True,\n)\nmodel = model.eval()\n\n# get model specific transforms (normalization, resize)\ndata_config = timm.data.resolve_model_data_config(model)\ntransforms = timm.data.create_transform(**data_config, is_training=False)\n\noutput = model(transforms(img).unsqueeze(0))  # unsqueeze single image into batch of 1\n\nfor o in output:\n    # print shape of each feature map in output\n    # e.g.:\n    #  torch.Size([1, 16, 112, 112])\n    #  torch.Size([1, 24, 56, 56])\n    #  torch.Size([1, 32, 28, 28])\n    #  torch.Size([1, 96, 14, 14])\n    #  torch.Size([1, 320, 7, 7])\n\n    print(o.shape)\n\nfrom urllib.request import urlopen\nfrom PIL import Image\nimport timm\n\nimg = Image.open(urlopen(\n    'https://huggingface.co/datasets/huggingface/documentation-images/resolve/main/beignets-task-guide.png'\n))\n\nmodel = timm.create_model(\n    'mobilenetv2_100.ra_in1k',\n    pretrained=True,\n    num_classes=0,  # remove classifier nn.Linear\n)\nmodel = model.eval()\n\n# get model specific transforms (normalization, resize)\ndata_config = timm.data.resolve_model_data_config(model)\ntransforms = timm.data.create_transform(**data_config, is_training=False)\n\noutput = model(transforms(img).unsqueeze(0))  # output is (batch_size, num_features) shaped tensor\n\n# or equivalently (without needing to set num_classes=0)\n\noutput = model.forward_features(transforms(img).unsqueeze(0))\n# output is unpooled, a (1, 1280, 7, 7) shaped tensor\n\noutput = model.forward_head(output, pre_logits=True)\n# output is a (1, num_features) shaped tensor"
+            }
+          ],
+          "datasets": [
+            {
+              "id": "uoft-cs/cifar10",
+              "author": "uoft-cs",
+              "sha": "0b2714987fa478483af9968de7c934580d0bb9a2",
+              "created_at": "2022-03-02T23:29:22+00:00",
+              "last_modified": "2024-01-04T06:53:11+00:00",
+              "private": false,
+              "gated": false,
+              "disabled": false,
+              "downloads": 86794,
+              "likes": 88,
+              "siblings": [
+                {
+                  "rfilename": ".gitattributes"
+                },
+                {
+                  "rfilename": "README.md"
+                },
+                {
+                  "rfilename": "plain_text/test-00000-of-00001.parquet"
+                },
+                {
+                  "rfilename": "plain_text/train-00000-of-00001.parquet"
+                }
+              ],
+              "card_data": {
+                "license": [
+                  "unknown"
+                ],
+                "language": [
+                  "en"
+                ],
+                "tags": [],
+                "datasets": [],
+                "task_categories": [
+                  "image-classification"
+                ],
+                "size_categories": [
+                  "10K<n<100K"
+                ],
+                "metrics": [],
+                "widget": []
+              },
+              "tags": [
+                "task_categories:image-classification",
+                "annotations_creators:crowdsourced",
+                "language_creators:found",
+                "multilinguality:monolingual",
+                "source_datasets:extended|other-80-Million-Tiny-Images",
+                "language:en",
+                "license:unknown",
+                "size_categories:10K<n<100K",
+                "format:parquet",
+                "modality:image",
+                "library:datasets",
+                "library:pandas",
+                "library:mlcroissant",
+                "library:polars",
+                "region:us"
+              ],
+              "readme": "---\nannotations_creators:\n- crowdsourced\nlanguage_creators:\n- found\nlanguage:\n- en\nlicense:\n- unknown\nmultilinguality:\n- monolingual\nsize_categories:\n- 10K<n<100K\nsource_datasets:\n- extended|other-80-Million-Tiny-Images\ntask_categories:\n- image-classification\ntask_ids: []\npaperswithcode_id: cifar-10\npretty_name: Cifar10\ndataset_info:\n  config_name: plain_text\n  features:\n  - name: img\n    dtype: image\n  - name: label\n    dtype:\n      class_label:\n        names:\n          '0': airplane\n          '1': automobile\n          '2': bird\n          '3': cat\n          '4': deer\n          '5': dog\n          '6': frog\n          '7': horse\n          '8': ship\n          '9': truck\n  splits:\n  - name: train\n    num_bytes: 113648310.0\n    num_examples: 50000\n  - name: test\n    num_bytes: 22731580.0\n    num_examples: 10000\n  download_size: 143646105\n  dataset_size: 136379890.0\nconfigs:\n- config_name: plain_text\n  data_files:\n  - split: train\n    path: plain_text/train-*\n  - split: test\n    path: plain_text/test-*\n  default: true\n---\n\n# Dataset Card for CIFAR-10\n\n## Table of Contents\n- [Dataset Description](#dataset-description)\n  - [Dataset Summary](#dataset-summary)\n  - [Supported Tasks and Leaderboards](#supported-tasks-and-leaderboards)\n  - [Languages](#languages)\n- [Dataset Structure](#dataset-structure)\n  - [Data Instances](#data-instances)\n  - [Data Fields](#data-fields)\n  - [Data Splits](#data-splits)\n- [Dataset Creation](#dataset-creation)\n  - [Curation Rationale](#curation-rationale)\n  - [Source Data](#source-data)\n  - [Annotations](#annotations)\n  - [Personal and Sensitive Information](#personal-and-sensitive-information)\n- [Considerations for Using the Data](#considerations-for-using-the-data)\n  - [Social Impact of Dataset](#social-impact-of-dataset)\n  - [Discussion of Biases](#discussion-of-biases)\n  - [Other Known Limitations](#other-known-limitations)\n- [Additional Information](#additional-information)\n  - [Dataset Curators](#dataset-curators)\n  - [Licensing Information](#licensing-information)\n  - [Citation Information](#citation-information)\n  - [Contributions](#contributions)\n\n## Dataset Description\n\n- **Homepage:** https://www.cs.toronto.edu/~kriz/cifar.html\n- **Repository:** \n- **Paper:** Learning Multiple Layers of Features from Tiny Images by Alex Krizhevsky\n- **Leaderboard:**\n- **Point of Contact:**\n\n### Dataset Summary\n\nThe CIFAR-10 dataset consists of 60000 32x32 colour images in 10 classes, with 6000 images per class. There are 50000 training images and 10000 test images.\nThe dataset is divided into five training batches and one test batch, each with 10000 images. The test batch contains exactly 1000 randomly-selected images from each class. The training batches contain the remaining images in random order, but some training batches may contain more images from one class than another. Between them, the training batches contain exactly 5000 images from each class.\n\n### Supported Tasks and Leaderboards\n\n- `image-classification`: The goal of this task is to classify a given image into one of 10 classes. The leaderboard is available [here](https://paperswithcode.com/sota/image-classification-on-cifar-10).\n\n### Languages\n\nEnglish\n\n## Dataset Structure\n\n### Data Instances\n\nA sample from the training set is provided below:\n\n```\n{\n  'img': <PIL.PngImagePlugin.PngImageFile image mode=RGB size=32x32 at 0x201FA6EE748>,\n  'label': 0\n}\n```\n\n### Data Fields\n\n- img: A `PIL.Image.Image` object containing the 32x32 image. Note that when accessing the image column: `dataset[0][\"image\"]` the image file is automatically decoded. Decoding of a large number of image files might take a significant amount of time. Thus it is important to first query the sample index before the `\"image\"` column, *i.e.* `dataset[0][\"image\"]` should **always** be preferred over `dataset[\"image\"][0]`\n- label: 0-9 with the following correspondence\n         0 airplane\n         1 automobile\n         2 bird\n         3 cat\n         4 deer\n         5 dog\n         6 frog\n         7 horse\n         8 ship\n         9 truck\n\n### Data Splits\n\nTrain and Test\n\n## Dataset Creation\n\n### Curation Rationale\n\n[More Information Needed]\n\n### Source Data\n\n#### Initial Data Collection and Normalization\n\n[More Information Needed]\n\n#### Who are the source language producers?\n\n[More Information Needed]\n\n### Annotations\n\n#### Annotation process\n\n[More Information Needed]\n\n#### Who are the annotators?\n\n[More Information Needed]\n\n### Personal and Sensitive Information\n\n[More Information Needed]\n\n## Considerations for Using the Data\n\n### Social Impact of Dataset\n\n[More Information Needed]\n\n### Discussion of Biases\n\n[More Information Needed]\n\n### Other Known Limitations\n\n[More Information Needed]\n\n## Additional Information\n\n### Dataset Curators\n\n[More Information Needed]\n\n### Licensing Information\n\n[More Information Needed]\n\n### Citation Information\n\n```\n@TECHREPORT{Krizhevsky09learningmultiple,\n    author = {Alex Krizhevsky},\n    title = {Learning multiple layers of features from tiny images},\n    institution = {},\n    year = {2009}\n}\n```\n\n### Contributions\n\nThanks to [@czabo](https://github.com/czabo) for adding this dataset.",
+              "extracted_code": ""
+            }
+          ]
+        }
+      }
     }
   },
   "idea_info_history": [
