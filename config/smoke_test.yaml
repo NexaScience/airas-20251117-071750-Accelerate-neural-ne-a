@@ -1,0 +1,98 @@
+experiments:
+  - run_id: fedavg_smoke
+    description: |-
+      Smoke-test full-precision FedAvg on synthetic data.
+    dataset:
+      name: synthetic
+      num_clients: 2
+      alpha: 0.5
+      batch_size: 32
+    model:
+      name: fedavg
+      architecture: tiny_cnn
+      bits: 32
+      lambda_b: 0.0
+    training:
+      num_rounds: 2
+      local_epochs: 1
+      lr: 0.01
+      seed: 0
+
+  - run_id: fedmpq_smoke
+    description: |-
+      Smoke-test FedMPQ baseline with synthetic data.
+    dataset:
+      name: synthetic
+      num_clients: 2
+      alpha: 0.5
+      batch_size: 32
+    model:
+      name: fedmpq
+      architecture: tiny_cnn
+      bits: 8
+      lambda_b: 0.01
+    training:
+      num_rounds: 2
+      local_epochs: 1
+      lr: 0.01
+      seed: 1
+
+  - run_id: fedpq_smoke
+    description: |-
+      Smoke-test FedPQ baseline with synthetic data.
+    dataset:
+      name: synthetic
+      num_clients: 2
+      alpha: 0.5
+      batch_size: 32
+    model:
+      name: fedpq
+      architecture: tiny_cnn
+      bits: 8
+      lambda_b: 0.0
+    training:
+      num_rounds: 2
+      local_epochs: 1
+      lr: 0.01
+      seed: 2
+
+  - run_id: fedmpq_kd_smoke
+    description: |-
+      Smoke-test FedMPQ-KD (ours) with synthetic data.
+    dataset:
+      name: synthetic
+      num_clients: 2
+      alpha: 0.5
+      batch_size: 32
+    model:
+      name: fedmpq_kd
+      architecture: tiny_cnn
+      bits: 8
+      lambda_b: 0.01
+    training:
+      num_rounds: 2
+      local_epochs: 1
+      lr: 0.01
+      seed: 3
+    kd_params:
+      alpha: 0.5
+      T: 2.0
+
+  - run_id: fedmpq_nokd_smoke
+    description: |-
+      Smoke-test ablation run (FedMPQ-noKD) identical to FedMPQ baseline.
+    dataset:
+      name: synthetic
+      num_clients: 2
+      alpha: 0.5
+      batch_size: 32
+    model:
+      name: fedmpq
+      architecture: tiny_cnn
+      bits: 8
+      lambda_b: 0.01
+    training:
+      num_rounds: 2
+      local_epochs: 1
+      lr: 0.01
+      seed: 4

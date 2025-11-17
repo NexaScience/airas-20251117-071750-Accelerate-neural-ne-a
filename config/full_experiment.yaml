@@ -1,0 +1,101 @@
+experiments:
+  - run_id: full-precision-FedAvg
+    description: |-
+      Full-precision upper-bound using vanilla FedAvg with ResNet-20.
+    dataset:
+      name: cifar10
+      num_clients: 10
+      alpha: 0.5
+      batch_size: 64
+    model:
+      name: fedavg
+      architecture: resnet20
+      bits: 32   # no quantisation
+      lambda_b: 0.0
+    training:
+      num_rounds: 50
+      local_epochs: 1
+      lr: 0.1
+      seed: 0
+
+  - run_id: FedMPQ-baseline
+    description: |-
+      Original FedMPQ with 4-bit mixed-precision weights and bit-regularisation.
+    dataset:
+      name: cifar10
+      num_clients: 10
+      alpha: 0.5
+      batch_size: 64
+    model:
+      name: fedmpq
+      architecture: resnet20
+      bits: 4
+      lambda_b: 0.01
+    training:
+      num_rounds: 50
+      local_epochs: 1
+      lr: 0.1
+      seed: 1
+
+  - run_id: FedPQ-SOTA
+    description: |-
+      FedPQ – vector-quantisation baseline, here approximated by uniform 4-bit quantisation without bit-regulariser.
+    dataset:
+      name: cifar10
+      num_clients: 10
+      alpha: 0.5
+      batch_size: 64
+    model:
+      name: fedpq
+      architecture: resnet20
+      bits: 4
+      lambda_b: 0.0
+    training:
+      num_rounds: 50
+      local_epochs: 1
+      lr: 0.1
+      seed: 2
+
+  - run_id: FedMPQ-KD (ours)
+    description: |-
+      Proposed FedMPQ-KD with in-round knowledge-distillation (α=0.5, T=2).
+    dataset:
+      name: cifar10
+      num_clients: 10
+      alpha: 0.5
+      batch_size: 64
+    model:
+      name: fedmpq_kd
+      architecture: resnet20
+      bits: 4
+      lambda_b: 0.01
+    training:
+      num_rounds: 50
+      local_epochs: 1
+      lr: 0.1
+      seed: 3
+    kd_params:
+      alpha: 0.5
+      T: 2.0
+
+  - run_id: FedMPQ-noKD-ablation
+    description: |-
+      Ablation of our method without the KD loss (equivalent to FedMPQ baseline configuration).
+    dataset:
+      name: cifar10
+      num_clients: 10
+      alpha: 0.5
+      batch_size: 64
+    model:
+      name: fedmpq
+      architecture: resnet20
+      bits: 4
+      lambda_b: 0.01
+    training:
+      num_rounds: 50
+      local_epochs: 1
+      lr: 0.1
+      seed: 4
+    # No kd_params because KD is disabled
+
+# End of file
