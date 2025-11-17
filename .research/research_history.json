@@ -2,5 +2,13 @@
   "research_topic": "Accelerate neural network training",
   "queries": [
     "distributed mixed-precision training"
+  ],
+  "research_study_list": [
+    {
+      "title": "Mixed-Precision Quantization for Federated Learning on Resource-Constrained Heterogeneous Devices"
+    },
+    {
+      "title": "Moshpit SGD: Communication-Efficient Decentralized Training on Heterogeneous Unreliable Devices"
+    }
   ]
 }
