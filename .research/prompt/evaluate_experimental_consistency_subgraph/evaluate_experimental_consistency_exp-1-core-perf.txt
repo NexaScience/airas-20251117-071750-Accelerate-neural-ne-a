@@ -1,0 +1,200 @@
+
+Input:
+
+# Instructions
+You are a scientific research consistency evaluator. Your task is to evaluate a single experiment to determine:
+1. Whether it is consistent with the proposed method and experimental strategy
+2. Whether the results support the main claims (e.g., proposed method outperforms baseline)
+3. Whether it should be included in the research paper
+
+## Scope Constraints
+- Focus ONLY on evaluating consistency between the proposed method and experimental results
+- Do not suggest infrastructure changes (Docker, lock files, etc.)
+- Do not recommend development/testing procedures (unit tests, synthetic graphs, etc.)
+- Do not suggest implementation details or code improvements
+- Do not recommend data release or reproducibility practices
+- Do not require or suggest experiments on actual hardware (e.g., real edge devices, physical deployment)
+- Evaluate only: method-result alignment, experimental design adequacy, result interpretation validity, and statistical rigor within computational/simulation contexts
+
+Based on your analysis, provide:
+1. `consistency_feedback` (str): Detailed feedback explaining the consistency evaluation and suggestions for improvement
+2. `consistency_score` (int): A score from 1-10 indicating the quality and consistency of the experimental design and results
+
+## Evaluation Criteria
+
+### consistency_feedback (str)
+Provide specific feedback focused on **scientific consistency evaluation** and **clearly categorize the source of any issues**:
+
+**Problem Categorization - Identify which area(s) need improvement:**
+
+1. **Experimental Strategy Issues**:
+   - Evaluate if the experimental strategy is fundamentally sound for validating the proposed method
+   - Assess whether the experimental setup provides adequate scope and rigor
+   - Identify if the chosen metrics, baselines, or evaluation approach are appropriate
+
+2. **Implementation Issues**:
+   - Assess whether the generated code correctly implements the described experimental strategy
+   - Identify gaps between what the strategy specifies and what the code actually does
+   - Point out if the implementation fails to follow the experimental design
+
+3. **Result Interpretation Issues**:
+   - Assess alignment between claimed method and actual experimental results
+   - Identify gaps between theoretical claims and empirical evidence
+   - Point out contradictions between expected and observed outcomes
+   - **Critical**: Check if the proposed method demonstrates improvement over baseline
+
+**For each identified issue, clearly specify:**
+- Which category the problem falls into
+- What specific aspect needs improvement
+- How it affects the paper inclusion decision
+
+### consistency_score (int)
+Provide a numerical score (1-10) based on execution status and result quality:
+
+- **1-3: Critical Failure / Not Executed**
+  - The experiment failed to run (e.g., code crash, setup error)
+  - Produced no meaningful output
+  - Implementation was fundamentally flawed, invalidating the results
+  - The primary claims cannot be evaluated
+
+- **4-5: Executed, but Poor or Negative Results**
+  - The experiment ran correctly, but the results are negative
+  - The proposed method performs worse than or shows no meaningful improvement over the baseline
+  - The results contradict or fail to support the primary claims
+
+- **6-7: Executed, Positive but Not Conclusive Results**
+  - The experiment ran correctly and shows clear positive improvement over the baseline
+  - Results align with the primary claims
+  - Evidence is weakened by minor issues in scientific rigor (e.g., single-seed runs, lack of statistical tests, limited scope)
+  - The results are suggestive but not definitive
+
+- **8-10: Executed, Conclusive and High-Impact Results**
+  - The experiment ran correctly and provides strong, reliable evidence supporting the primary claims
+  - Results are clearly superior to the baseline
+  - Experimental design demonstrates high scientific rigor (e.g., multiple runs, fair comparisons, statistical validation)
+  - Score of 9-10 indicates particularly impactful and insightful magnitude of improvement
+
+## Context
+
+**Proposed Method:** {
+    "Open Problems": "FedMPQ suffers a noticeable accuracy drop when the number of local epochs per communication round is small (e.g., 1).  The quantized model is under-fitted because every client sees only a handful of batches before synchronizing, so sparsity-promoting bit-regularisation dominates the task loss.\nA minimal change that can mitigate this problem is to provide a stronger learning signal to the low-bit model during those few local steps without increasing communication or computational cost.",
+    "Methods": "We propose FedMPQ-KD (Mixed-Precision Quantisation with in-round Knowledge Distillation).\nModification (one line in the objective):\n    L_total = L_task  +  λ_b  * L_bit  +  α  * T²  * KL( softmax(z_s /T) || softmax(z_t /T) )\nwhere\n• z_s are logits of the current quantised student model,  z_t the logits of a fixed full-precision (or latest aggregated) teacher model held locally;  T is temperature and α the distillation weight.\n\nProcedure per client (changes in bold):\n1. Receive aggregated full-precision weights W_t from the server (already done in FedMPQ).\n2. Create two models:\n   a) quantised student exactly as in FedMPQ (weights in mixed precision).\n   b) ****freeze a copy of W_t in full precision as teacher****.\n3. For E local epochs, optimise the student with the extended loss above.  The teacher only produces logits; no back-prop.\n4. Send student weight updates as usual.\n\nWhy it helps: KL term supplies rich, dark-knowledge gradients that are independent of the (possibly hard) one-hot labels.  This compensates for the small number of SGD steps, guiding low-capacity, low-bit layers toward the teacher’s function and speeding convergence.  No extra communication, negligible compute (a single forward pass of the frozen teacher).",
+    "Experimental Setup": "Goal: verify that FedMPQ-KD closes the performance gap when only 1 local epoch is used.\n• Dataset: CIFAR-10 (10 clients, α=0.5 Dirichlet split).\n• Network: ResNet-20.\n• Budgets: average 4-bit, mixed across layers as in the original paper.\n• Baselines:  (1) FedMPQ (original)  (2) FedMPQ-KD (ours).\n• Hyper-parameters:  λ_b =0.01 (unchanged),  α=0.5,  T=2.\n• Training: 50 communication rounds, 1 local epoch, batch-size 64, SGD lr 0.1.\n• Metric: global test accuracy after every round.\nExpected observation window: accuracy vs. rounds and final accuracy.",
+    "Experimental Code": "# Core change: additional KD loss inside the local-training loop\nimport torch, torch.nn as nn, torch.nn.functional as F\n\ndef kd_loss(logits_student, logits_teacher, T=2.0):\n    \"\"\"KL divergence with temperature.\"\"\"\n    p_s = F.log_softmax(logits_student / T, dim=1)\n    p_t = F.softmax(logits_teacher.detach() / T, dim=1)\n    return F.kl_div(p_s, p_t, reduction='batchmean') * (T*T)\n\nclass LocalTrainer:\n    def __init__(self, student, teacher, dataloader, lr=0.1, lambda_b=0.01, alpha=0.5):\n        self.student = student  # quantised weights already applied\n        self.teacher = teacher.eval()  # full-precision copy, frozen\n        self.opt = torch.optim.SGD(student.parameters(), lr=lr, momentum=0.9)\n        self.dl = dataloader\n        self.lambda_b = lambda_b\n        self.alpha = alpha\n\n    def train_one_epoch(self):\n        self.student.train()\n        for x, y in self.dl:\n            logits_s = self.student(x)\n            logits_t = self.teacher(x)\n            loss_task = F.cross_entropy(logits_s, y)\n            loss_bit  = self.student.bit_regulariser()   # as in FedMPQ\n            loss_kd   = kd_loss(logits_s, logits_t)\n            loss = loss_task + self.lambda_b*loss_bit + self.alpha*loss_kd\n            self.opt.zero_grad(); loss.backward(); self.opt.step()\n",
+    "Expected Result": "With only 1 local epoch, FedMPQ reaches ≈82% CIFAR-10 accuracy after 50 rounds (reported drop of ~3-4% from full baseline).  FedMPQ-KD is expected to recover 2-3% of that gap, ending at ≈84-85%, and to show consistently higher accuracy in the first 20 rounds, indicating faster convergence.",
+    "Expected Conclusion": "A single extra knowledge-distillation term supplies richer gradients to the quantised student during scarce local training, reducing under-fitting without additional communication or heavy computation.  This minimal modification measurably accelerates convergence and boosts final accuracy, demonstrating that small objective tweaks can alleviate key practical limitations of mixed-precision federated learning."
+}
+
+**Overall Experimental Strategy:** Objective: Build a single, coherent framework that will let every subsequent experiment answer one overarching question – does FedMPQ-KD provide a strictly better accuracy-vs-cost trade-off than competing quantised FL schemes across realistic operating conditions?
+
+1. Core Hypotheses to Validate
+   a. Performance: FedMPQ-KD raises final accuracy and accelerates early-round convergence when local training is scarce.
+   b. Efficiency: The extra forward pass of the frozen teacher adds ≤10 % wall-time and 0 extra communication bits.
+   c. Robustness & Generalisation: Gains hold under• different data splits (IID / strongly non-IID)、client counts (10-100)、architectures (CNN / Transformer)、quantisation budgets (2-8 bit) and noisy or dropping clients.
+   d. Scalability: Method scales linearly in compute and logarithmically in communication with number of clients.
+
+2. Comparison Palette (identical across all experiments)
+   • Baselines: (1) FedMPQ (original) (2) Full-precision FedAvg (upper bound) (3) SOTA low-bit FL alternatives (FedPQ, FedKD, Q-FedAvg).
+   • Ablations: i) –KD (λ_b+L_task only) ii) varying α, T iii) updating vs freezing the teacher iv) local vs global teacher refresh frequency.
+
+3. Evaluation Angles
+   3.1 Quantitative Performance
+       – Top-1 accuracy vs communication rounds (primary)
+       – Area-under-curve (AUC_acc) to capture convergence speed
+       – Final accuracy gap to full-precision
+   3.2 Cost Metrics
+       – Client-side FLOPs & wall-clock per round (measured on A100)
+       – Communication bits / round (should be unchanged)
+       – Peak GPU VRAM & host RAM
+   3.3 Robustness Metrics
+       – Accuracy variance across 3 random seeds
+       – Degradation (% drop) under extreme non-IID, stragglers, label noise
+   3.4 Qualitative / Diagnostic
+       – t-SNE of penultimate-layer features (student vs teacher)
+       – Bit-width utilisation histograms
+       – Gradient-norm and loss-landscape snapshots to illustrate stronger signals.
+
+4. Experimental Axes (each future experiment picks one axis while keeping the rest fixed)
+   A. Local compute budget: E∈{1,2,5}
+   B. Quantisation budget: avg bits ∈{2,4,8}
+   C. Data heterogeneity: Dirichlet α∈{0.1,0.5,∞}
+   D. Model family: ResNet-20, MobileNet-V2, ViT-Small
+   E. Scale: clients ∈{10,50,100}; participation rate 10-100 %
+   F. Failure modes: 20 % clients randomly drop per round; 10 % label noise.
+
+5. Success Criteria (must hold in ≥80 % of experimental settings)
+   • +≥2 % absolute test accuracy OR ≥25 % smaller gap to full-precision compared with best quantised baseline, p<0.05 (t-test over seeds).
+   • No statistically significant increase in communication volume.
+   • Added wall-time ≤10 % per round on A100.
+   • Under worst-case non-IID, KD variant still outperforms FedMPQ by ≥1 %.
+
+6. Protocol & Reproducibility
+   • Same optimiser, LR schedule, batch size across methods; only α and T tuned once on a small validation pool and kept fixed.
+   • Three independent seeds; report mean±std.
+   • Use PyTorch w/ deterministic flags; log hardware utilisation via NVIDIA-smi and PyTorch profiler.
+   • Release code & logs; each run stores JSON metadata capturing hyper-params, seed, commit hash.
+
+7. Resource Awareness
+   • Single NVIDIA A100 (80 GB) easily fits teacher + student (≤4 GB each). Multiple runs executed sequentially; RAM (2 TB) allows in-memory aggregation of logs for analysis.
+
+By following this common strategy—fixed baselines, uniform metrics, multifaceted validation axes, and rigid success criteria—each forthcoming experiment will contribute a comparable slice of evidence, together establishing the robustness, efficiency and overall superiority of FedMPQ-KD.
+
+## Current Experiment to Evaluate
+
+**Experiment ID:** exp-1-core-perf
+
+**Experiment Description:** Objective / Hypothesis: Quantitatively verify that FedMPQ-KD closes ≥25 % of the accuracy gap to full-precision while adding ≤10 % wall-time when local compute per round is scarce (E=1). Ablations (-KD) will show the necessity of the new distillation term.
+
+Models:
+ • Student: ResNet-20 (mixed-precision: layer-wise 2–8 bit, avg 4 bit).
+ • Teacher (for KD): full-precision ResNet-20 snapshot received from server at the start of the round. Frozen during local training.
+ • Baselines/SOTA: original FedMPQ implementation, FedPQ (vector quantisation), full-precision FedAvg upper bound.
+
+Dataset:
+ • CIFAR-10, 32×32 RGB.
+Pre-processing: per-channel mean/std normalisation, random 32→28 crop & horizontal flip on train only.
+Split: 10 clients, Dirichlet α = 0.5 non-IID. Each client keeps its own train subset; 10 % of each local set used as local validation for early stopping; global test set untouched.
+
+Training protocol:
+ • Local epochs E = 1, batch 64, SGD lr 0.1, momentum 0.9, cosine decay.
+ • 50 communication rounds, 3 independent seeds.
+ • Early stopping not allowed; evaluate after each round.
+Averaging: report mean±std across seeds; primary score is final top-1 test accuracy, secondary AUC_acc (trapezoidal area under accuracy-vs-round curve).
+Selection criterion in plots: last checkpoint.
+
+Cost measurement: client-side wall-time and FLOPs captured with PyTorch profiler, VRAM via nvprof; communication bits measured from update tensor sizes.
+
+Hyper-param analysis: run FedMPQ-KD with α∈{0.25,0.5,1.0} and T∈{1,2,4} on a held-out validation script (not part of main comparison) to confirm the chosen α=0.5, T=2 is near-optimal.
+
+Metrics: Primary – top-1 accuracy; Secondary – AUC_acc, gap_to_full-precision, FLOPs/round, wall-time/round, comm_bits/round, ECE calibration error.
+
+Robustness hooks (recorded but not baseline-plotted): repeat whole experiment once with label-noise 10 % to verify ranking stability.
+
+Example code snippet (local training loop excerpt):
+```
+for x,y in dl:
+    logits_s = student(x)
+    logits_t = teacher(x)          # frozen fp32
+    loss = ce(logits_s,y) + 0.01*student.bit_reg() + 0.5*kd_loss(logits_s, logits_t, T=2)
+    loss.backward(); opt.step()
+```
+Resource estimate on A100:   GPU RAM 4 GB per process; wall-time per round 15 s full-precision, 10 s compressed, 11 s w/ KD (≈+9 %).
+Success criterion: FedMPQ-KD ≥84 % accuracy (≥+2 % over FedMPQ) with ≤11 s/round.
+
+**Run Variations:** ['full-precision-FedAvg', 'FedMPQ-baseline', 'FedPQ-SOTA', 'FedMPQ-KD (ours)', 'FedMPQ-noKD-ablation']
+
+**Generated Code:** {"evaluate_py": "", "full_experiment_yaml": "", "main_py": "", "model_py": "", "preprocess_py": "", "pyproject_toml": "", "smoke_test_yaml": "", "train_py": ""}
+
+**Experimental Results:**
+
+- Result: 
+- Error: 
+- Images: []
+
+
+**Primary Goal**: Evaluate whether this specific experiment is consistent, supports the main claims, and should be included in the research paper.
+Output:
+{
+    "consistency_feedback": "The experiment description, metrics and success criteria are well aligned with the paper’s core hypothesis, so the experimental strategy itself is solid (no serious Experimental-Strategy Issue).  \n\nHowever, the accompanying artefacts show that the experiment never ran:\n• No training-log, table or plot is provided – “Experimental Results” is empty.\n• The code bundle is empty strings for every file; therefore the implementation that should realise the stated procedure is missing.  \n\nBecause the run did not execute, none of the paper’s primary claims (≥2 % accuracy gain, ≤10 % wall-time overhead, closing ≥25 % of the gap) can be empirically verified.  Consequently:\n\n1. Implementation Issue – The implementation required to conduct exp-1-core-perf is absent, so the experiment cannot be reproduced or evaluated.\n   • Impact: Prevents any assessment of whether KD improves accuracy or cost; invalidates the result section.\n\n2. Result-Interpretation Issue – Since no numbers are reported, the manuscript would necessarily speculate about expected gains, which is scientifically unsound.\n   • Impact: The claims remain unsupported; including this experiment in the paper would weaken credibility.\n\nRecommendation for paper inclusion: Do NOT include exp-1-core-perf in its current state. First supply a runnable implementation, execute the three-seed trials, and report mean±std for all declared metrics with appropriate statistical tests. Only then can the results substantiate the central claim that FedMPQ-KD outperforms the baselines under scarce local training.",
+    "consistency_score": 2
+}
