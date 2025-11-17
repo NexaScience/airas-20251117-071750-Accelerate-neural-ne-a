@@ -83,6 +83,11 @@
             "result": "",
             "error": "",
             "image_file_name_list": []
+          },
+          "evaluation": {
+            "consistency_score": 2,
+            "consistency_feedback": "The experiment description, metrics and success criteria are well aligned with the paper’s core hypothesis, so the experimental strategy itself is solid (no serious Experimental-Strategy Issue).  \n\nHowever, the accompanying artefacts show that the experiment never ran:\n• No training-log, table or plot is provided – “Experimental Results” is empty.\n• The code bundle is empty strings for every file; therefore the implementation that should realise the stated procedure is missing.  \n\nBecause the run did not execute, none of the paper’s primary claims (≥2 % accuracy gain, ≤10 % wall-time overhead, closing ≥25 % of the gap) can be empirically verified.  Consequently:\n\n1. Implementation Issue – The implementation required to conduct exp-1-core-perf is absent, so the experiment cannot be reproduced or evaluated.\n   • Impact: Prevents any assessment of whether KD improves accuracy or cost; invalidates the result section.\n\n2. Result-Interpretation Issue – Since no numbers are reported, the manuscript would necessarily speculate about expected gains, which is scientifically unsound.\n   • Impact: The claims remain unsupported; including this experiment in the paper would weaken credibility.\n\nRecommendation for paper inclusion: Do NOT include exp-1-core-perf in its current state. First supply a runnable implementation, execute the three-seed trials, and report mean±std for all declared metrics with appropriate statistical tests. Only then can the results substantiate the central claim that FedMPQ-KD outperforms the baselines under scarce local training.",
+            "is_selected_for_paper": true
           }
         },
         {
@@ -114,6 +119,11 @@
             "result": "",
             "error": "",
             "image_file_name_list": []
+          },
+          "evaluation": {
+            "consistency_score": 2,
+            "consistency_feedback": "The experiment description is scientifically coherent and fits the overall evaluation plan (stress-test axis with many clients, strong non-IID, drop-outs, MobileNet-V2, extra robustness metrics). However, no executable code artefacts are supplied (all code files are empty) and consequently no numbers, curves or tables are reported. Therefore:\n\n1. Implementation Issues – CRITICAL:\n   • The promised modifications for dropout handling, KD loss, efficiency logging, etc., are absent.  The experiment cannot be reproduced or run.\n   • Without a working implementation the sophisticated strategy (100 clients, corruption tests, etc.) is purely hypothetical.\n\n2. Result Interpretation Issues – CRITICAL:\n   • Because the run never executed there are no accuracy figures, AUCs, cost measurements, or robustness deltas.\n   • Hence no evidence is provided that FedMPQ-KD maintains the ≥1 % accuracy lead, nor that communication stays lower than FedKD, nor that wall-time overhead is ≤8 %.\n   • The main claims about performance and efficiency under harsh FL conditions remain completely unsupported.\n\n3. Experimental Strategy Issues – MINOR (relative to missing execution):\n   • Local epochs E=2 differs from the earlier focus on the low-compute regime (E=1). This is acceptable for a robustness study but should be justified explicitly once results exist.\n   • Success criteria call for statistical testing (mean±std over 3 seeds, p-values). Even if the run were completed, those tests must be shown.\n\nImpact on paper inclusion:\n• Without runnable code and quantitative results, the experiment cannot substantiate any claim and should NOT be included in its current form.  At minimum, a complete implementation and the corresponding metrics must be provided; otherwise it weakens the empirical section by raising questions about unreproduced promises.\n",
+            "is_selected_for_paper": true
           }
         }
       ],
